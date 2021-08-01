@@ -1,5 +1,6 @@
+import { browserstackLauncher } from '@web/test-runner-browserstack';
 import { defaultReporter } from '@web/test-runner';
-import { puppeteerLauncher } from '@web/test-runner-puppeteer';
+//import { puppeteerLauncher } from '@web/test-runner-puppeteer';
 import { visualRegressionPlugin } from '@web/test-runner-visual-regression/plugin';
 import percySnapshot from '@percy/puppeteer';
 import snowpackWebTestRunner from '@snowpack/web-test-runner-plugin';
@@ -129,27 +130,74 @@ function myPlugin() {
   };
 }
 
+const sharedCapabilities = {
+  // your username and key for browserstack, you can get this from your browserstack account
+  // it's recommended to store these as environment variables
+  'browserstack.user': process.env.BROWSER_STACK_USERNAME,
+  'browserstack.key': process.env.BROWSER_STACK_ACCESS_KEY,
+
+  project: 'rikaikun',
+  name: 'CI Testing',
+  // if you are running tests in a CI, the build id might be available as an
+  // environment variable. this is useful for identifying test runs
+  // this is for example the name for github actions
+  build: `build ${process.env.GITHUB_RUN_NUMBER || 'unknown'}`,
+  'browserstack.console': 'verbose',
+  'browserstack.networkLogs': 'true',
+};
+
 /** @type {import('@web/test-runner').TestRunnerConfig} */
 export default {
+  browserLogs: true,
+  browserStartTimeout: 1000 * 60 * 1,
+  testsStartTimeout: 1000 * 60 * 1,
+  testsFinishTimeout: 1000 * 60 * 3,
   testFramework: {
     config: {
       ui: 'bdd',
-      timeout: '20000000',
+      timeout: '2000',
     },
   },
   coverageConfig: {
     exclude: ['**/snowpack/**/*', '**/*.test.ts*'],
   },
+  // how many browsers to run concurrently in browserstack. increasing this significantly
+  // reduces testing time, but your subscription might limit concurrent connections
+  concurrentBrowsers: 2,
+  // amount of test files to execute concurrently in a browser. the default value is based
+  // on amount of available CPUs locally which is irrelevant when testing remotely
+  concurrency: 6,
   browsers: [
-    puppeteerLauncher({
-      launchOptions: {
-        executablePath: '/usr/bin/google-chrome',
-        headless: true,
-        // disable-gpu required for chrome to run for some reason.
-        args: ['--disable-gpu', '--remote-debugging-port=9333'],
+    // create a browser launcher per browser you want to test
+    // you can get the browser capabilities from the browserstack website
+    browserstackLauncher({
+      capabilities: {
+        ...sharedCapabilities,
+        browserName: 'Chrome',
+        os: 'Windows',
+        os_version: '10',
       },
     }),
+
+    // browserstackLauncher({
+    //   capabilities: {
+    //     ...sharedCapabilities,
+    //     browserName: 'Chrome',
+    //     os: 'OS X',
+    //     os_version: 'Big Sur',
+    //   },
+    // }),
   ],
+  // browsers: [
+  //   puppeteerLauncher({
+  //     launchOptions: {
+  //       // executablePath: '/usr/bin/google-chrome',
+  //       // headless: true,
+  //       // disable-gpu required for chrome to run for some reason.
+  //       args: ['--remote-debugging-port=9333'],
+  //     },
+  //   }),
+  // ],
   plugins: [
     snowpackWebTestRunner(),
     myPlugin(),
@@ -161,6 +209,9 @@ export default {
   // file initialization in rikaikun.
   testRunnerHtml: (testFramework) =>
     `<html>
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+      </head>
       <body>
         <script type="module" src="test/chrome_stubs.js"></script>
         <script type="module" src="${testFramework}"></script>

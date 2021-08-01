@@ -19,9 +19,26 @@ jobs:
         with:
           node-version: '14'
       - run: npm ci
+      - name: 'BrowserStack Env Setup'
+        uses: 'browserstack/github-actions/setup-env@master'
+        with:
+          username: ${{ secrets.BROWSER_STACK_USERNAME }}
+          access-key: ${{ secrets.BROWSER_STACK_ACCESS_KEY }}
+      - name: 'Start BrowserStackLocal Tunnel'
+        uses: 'browserstack/github-actions/setup-local@master'
+        with:
+          local-testing: start
+          local-logging-level: all-logs
+          local-identifier: random
       - run: npm run presubmit:coverage
         env:
           PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+          BROWSER_STACK_USERNAME: ${{ secrets.BROWSER_STACK_USERNAME }}
+          BROWSER_STACK_ACCESS_KEY: ${{ secrets.BROWSER_STACK_ACCESS_KEY }}
+      - name: 'Stop BrowserStackLocal'
+        uses: 'browserstack/github-actions/setup-local@master'
+        with:
+          local-testing: stop
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
