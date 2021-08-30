@@ -1,6 +1,5 @@
 import { browserstackLauncher } from '@web/test-runner-browserstack';
 import { defaultReporter } from '@web/test-runner';
-//import { puppeteerLauncher } from '@web/test-runner-puppeteer';
 import { visualRegressionPlugin } from '@web/test-runner-visual-regression/plugin';
 import percySnapshot from '@percy/puppeteer';
 import snowpackWebTestRunner from '@snowpack/web-test-runner-plugin';
@@ -141,13 +140,16 @@ const sharedCapabilities = {
   // if you are running tests in a CI, the build id might be available as an
   // environment variable. this is useful for identifying test runs
   // this is for example the name for github actions
-  build: `build ${process.env.GITHUB_RUN_NUMBER || 'unknown'}`,
+  build: `build ${process.env.GITHUB_RUN_NUMBER || 'local'}`,
   'browserstack.console': 'verbose',
-  'browserstack.networkLogs': 'true',
+  //'browserstack.networkLogs': 'true',
 };
 
 /** @type {import('@web/test-runner').TestRunnerConfig} */
 export default {
+  port: 9769,
+  protocol: 'http:',
+  hostname: 'localhost',
   browserLogs: true,
   browserStartTimeout: 1000 * 60 * 1,
   testsStartTimeout: 1000 * 60 * 1,
@@ -155,7 +157,7 @@ export default {
   testFramework: {
     config: {
       ui: 'bdd',
-      timeout: '2000',
+      timeout: '200000',
     },
   },
   coverageConfig: {
@@ -174,7 +176,8 @@ export default {
       capabilities: {
         ...sharedCapabilities,
         browserName: 'Chrome',
-        os: 'Windows',
+        browserVersion: 'latest',
+        os: 'windows',
         os_version: '10',
       },
     }),

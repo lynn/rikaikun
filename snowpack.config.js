@@ -8,6 +8,7 @@ const config = {
     // for path resolution in tests (at least).
     extension: { url: '/' },
   },
+  workspaceRoot: '..',
   plugins: [
     [
       'snowpack-plugin-replace',
