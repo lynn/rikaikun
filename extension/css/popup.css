@@ -249,3 +249,22 @@
 #rikaichan-window .small-info {
   font: small-caption;
 }
+
+/* Pitch accent */
+#rikaichan-window .a-bottom {
+  border-bottom: 1px solid var(--kanji-color) !important;
+  color: inherit;
+  font-size: inherit;
+}
+
+#rikaichan-window .a-right {
+  border-right: 1px solid var(--kanji-color) !important;
+  color: inherit;
+  font-size: inherit;
+}
+
+#rikaichan-window .a-top {
+  border-top: 1px solid var(--kanji-color) !important;
+  color: inherit;
+  font-size: inherit;
+}

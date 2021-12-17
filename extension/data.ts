@@ -98,6 +98,7 @@ class RcxDict {
   difReasons: string[] = [];
   difRules: DeinflectionRuleGroup[] = [];
   config: Config;
+  pitchAccent: Record<string, Array<[string, string, string]>> = {};
 
   private constructor(config: Config) {
     this.config = config;
@@ -184,13 +185,21 @@ class RcxDict {
   //  Note: These are mostly flat text files; loaded as one continuous string to
   //  reduce memory use
   async loadDictionaries(): Promise<void> {
-    [this.wordDict, this.wordIndex, this.kanjiData, this.radData] =
-      await Promise.all([
-        this.fileReadAsync(chrome.extension.getURL('data/dict.dat')),
-        this.fileReadAsync(chrome.extension.getURL('data/dict.idx')),
-        this.fileReadAsync(chrome.extension.getURL('data/kanji.dat')),
-        this.fileReadAsyncAsArray(chrome.extension.getURL('data/radicals.dat')),
-      ]);
+    [
+      this.wordDict,
+      this.wordIndex,
+      this.kanjiData,
+      this.radData,
+      this.pitchAccent,
+    ] = await Promise.all([
+      this.fileReadAsync(chrome.extension.getURL('data/dict.dat')),
+      this.fileReadAsync(chrome.extension.getURL('data/dict.idx')),
+      this.fileReadAsync(chrome.extension.getURL('data/kanji.dat')),
+      this.fileReadAsyncAsArray(chrome.extension.getURL('data/radicals.dat')),
+      this.fileReadAsync(
+        chrome.extension.getURL('data/pitch-accent.json')
+      ).then((x) => JSON.parse(x)),
+    ]);
   }
 
   async loadDeinflectionData() {
@@ -912,20 +921,35 @@ class RcxDict {
           k = t.length ? '<br/>' : '';
         }
 
+        let acc = '';
+        const pa = this.pitchAccent[e[1] || e[2]];
+        if (pa && pa.length > 0) {
+          const e21 = e[2] || e[1];
+          const matchesPronunciation = pa.filter((x) => x[2] === e21);
+          if (matchesPronunciation.length > 0) {
+            const [wadoku, kanjium] = matchesPronunciation[0];
+            acc = kanjium || wadoku || '';
+            acc = acc.split(',')[0].trim();
+          }
+        }
+
         if (e[2]) {
           if (pK === e[1]) {
-            k = '\u3001 <span class="w-kana">' + e[2] + '</span>';
+            k =
+              '\u3001 <span class="w-kana">' +
+              this.accent(acc, e[2]) +
+              '</span>';
           } else {
             k +=
               '<span class="w-kanji">' +
               e[1] +
               '</span> &#32; <span class="w-kana">' +
-              e[2] +
+              this.accent(acc, e[2]) +
               '</span>';
           }
           pK = e[1];
         } else {
-          k += '<span class="w-kana">' + e[1] + '</span>';
+          k += '<span class="w-kana">' + this.accent(acc, e[1]) + '</span>';
           pK = '';
         }
         b.push(k);
@@ -986,6 +1010,33 @@ class RcxDict {
     b.push(t);
 
     return b.join('');
+  }
+
+  accent(stepString: string, kana: string): string {
+    if (stepString === '') {
+      return kana;
+    }
+    const step = Number(stepString);
+    const mora = [
+      ...kana.matchAll(/.[ゃゅょぁぃぅぇぉャュョァィゥェォ]?/g),
+    ].map((x) => x[0]);
+    if (mora.length === 0) {
+      return '';
+    }
+    const headPos = step === 1 ? 'top' : 'bottom';
+    const head = `<span class="a-${headPos} a-right">${mora[0]}</span>`;
+    const rest = mora.slice(1).join('');
+    const tail =
+      step === 0
+        ? `<span class="a-top">${rest}</span>`
+        : step === 1
+        ? `<span class="a-bottom">${rest}</span>`
+        : `<span class="a-top a-right">${mora
+            .slice(1, step)
+            .join('')}</span><span class="a-bottom">${mora
+            .slice(step)
+            .join('')}</span>`;
+    return head + tail;
   }
 
   makeText(entry: DictEntryData | null, max: number): string {
